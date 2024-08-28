@@ -4,12 +4,16 @@ import { UpdateSchoolDto } from './dto/update-school.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { School } from './entities/school.entity';
+import { Address } from 'src/address/entities/address.entity';
+import { UpsertSchoolDto } from './dto/upsert-school.dto';
 
 @Injectable()
 export class SchoolService {
   constructor(
     @InjectRepository(School)
     private readonly schoolRepository: Repository<School>,
+    @InjectRepository(Address)
+    private readonly addressRepository: Repository<Address>,
   ) {}
 
   async create(createSchoolDto: CreateSchoolDto): Promise<School> {
@@ -24,7 +28,18 @@ export class SchoolService {
   async findOne(id: number): Promise<School> {
     const school = await this.schoolRepository.findOne({
       where: { id },
-      relations: ['addresses', 'organizations'], // Include relations if needed
+      relations: ['addresses', 'organizations'], 
+    });
+    if (!school) {
+      throw new NotFoundException(`School with ID ${id} not found`);
+    }
+    return school;
+  }
+
+  async findOneSchool(id: number): Promise<School> {
+    const school = await this.schoolRepository.findOne({
+      where: { id },
+       
     });
     if (!school) {
       throw new NotFoundException(`School with ID ${id} not found`);
@@ -40,6 +55,51 @@ export class SchoolService {
     if (!school) {
       throw new NotFoundException(`School with ID ${id} not found`);
     }
+    return await this.schoolRepository.save(school);
+  }
+
+  async upsertSchool(id: string, upsertSchoolDto: UpsertSchoolDto): Promise<School> {
+    const { name, addresses, ...schoolData } = upsertSchoolDto;
+
+
+    let school = await this.schoolRepository.findOne({
+      where: { name },
+      relations: ['addresses'],
+    });
+
+    if (school) {
+      // Update the existing school
+      school = this.schoolRepository.merge(school, schoolData);
+    } else {
+      // Create a new school
+      school = this.schoolRepository.create(schoolData);
+      school.name = name;
+    }
+
+    // Update or create addresses
+    if (addresses) {
+      const updatedAddresses: Address[] = [];
+      for (const addressDto of addresses) {
+        let address = school.addresses?.find(
+          (addr) => addr.address === addressDto.address,
+        );
+
+        if (address) {
+      
+          address = this.addressRepository.merge(address, addressDto);
+        } else {
+   
+          address = this.addressRepository.create(addressDto);
+          address.school = school; 
+        }
+        updatedAddresses.push(address);
+      }
+
+      
+      school.addresses = await this.addressRepository.save(updatedAddresses);
+    }
+
+    
     return await this.schoolRepository.save(school);
   }
 

@@ -2,9 +2,10 @@ import { Controller, Get, Post, Body, Patch, Param, Delete, NotFoundException } 
 import { OrganizationService } from './organization.service';
 import { CreateOrganizationDto } from './dto/create-organization.dto';
 import { UpdateOrganizationDto } from './dto/update-organization.dto';
-import { ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { OrganizationResponseDto } from './dto/organization-response.dto';
 
+@ApiTags("Organization")
 @Controller('organization')
 export class OrganizationController {
   constructor(private readonly organizationService: OrganizationService) {}

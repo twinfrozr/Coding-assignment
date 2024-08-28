@@ -2,9 +2,11 @@ import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/commo
 import { SchoolService } from './school.service';
 import { CreateSchoolDto } from './dto/create-school.dto';
 import { UpdateSchoolDto } from './dto/update-school.dto';
-import { ApiBody, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { School } from './entities/school.entity';
+import { UpsertSchoolDto } from './dto/upsert-school.dto';
 
+@ApiTags("School")
 @Controller('school')
 export class SchoolController {
   constructor(private readonly schoolService: SchoolService) {}
@@ -25,12 +27,20 @@ export class SchoolController {
     return this.schoolService.findAll();
   }
 
-  @Get(':id')
-  @ApiOperation({ summary: 'Get a school by ID' })
+  @Get('address/organization:id')
+  @ApiOperation({ summary: 'Get a school by ID and related address/organization' })
   @ApiResponse({ status: 200, description: 'The school details', type: School })
   @ApiResponse({ status: 404, description: 'School not found' })
   async findOne(@Param('id') id: number): Promise<School> {
     return this.schoolService.findOne(id);
+  }
+
+  @Get(':id')
+  @ApiOperation({ summary: 'Get a school by ID' })
+  @ApiResponse({ status: 200, description: 'The school details', type: School })
+  @ApiResponse({ status: 404, description: 'School not found' })
+  async findOneSchool(@Param('id') id: number): Promise<School> {
+    return this.schoolService.findOneSchool(id);
   }
 
   @Patch(':id')
@@ -43,6 +53,17 @@ export class SchoolController {
     @Body() updateSchoolDto: UpdateSchoolDto,
   ): Promise<School> {
     return this.schoolService.update(id, updateSchoolDto);
+  }
+
+  @Patch('upsert/:id')
+  @ApiOperation({ summary: 'Update or create a school along with related addresses' })
+  @ApiResponse({ status: 200, description: 'The school has been successfully updated or created.', type: School })
+  @ApiResponse({ status: 404, description: 'School not found.' })
+  async upsertSchool(
+    @Param('id') id: string,
+    @Body() upsertSchoolDto: UpsertSchoolDto,
+  ): Promise<School> {
+    return this.schoolService.upsertSchool(id, upsertSchoolDto);
   }
 
   @Delete(':id')
